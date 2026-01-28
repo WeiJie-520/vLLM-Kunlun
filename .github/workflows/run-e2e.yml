@@ -1,0 +1,8 @@
+name: run-e2e-test
+
+on:
+  workflow_dispatch:   
+
+jobs:
+  call-e2e:
+    uses: ./.github/workflows/_e2e_singlecard.yml
