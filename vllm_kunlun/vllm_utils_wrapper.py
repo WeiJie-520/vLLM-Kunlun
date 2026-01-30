@@ -1,16 +1,17 @@
 """vllm_utils_wrapper.py"""
 
-import vllm.distributed.parallel_state as parallel_state
-import vllm.utils as _orig
-from typing import Any, Callable, Optional, Union, get_origin, get_args, List, Tuple
-from types import SimpleNamespace
-import torch
-from torch.library import Library
 import inspect
 import typing
-from torch.library import register_fake
-import vllm_kunlun._kunlun
+from types import SimpleNamespace
+from typing import Any, Callable, List, Optional, Tuple, Union, get_args, get_origin
+
+import torch
+import vllm.distributed.parallel_state as parallel_state
 import vllm.envs as envs
+import vllm.utils as _orig
+from torch.library import Library, register_fake
+
+print("in vllm_utils_wrapper.py")
 
 
 def patch_annotations_for_schema(func):
@@ -204,11 +205,10 @@ parallel_state.GroupCoordinator.all_reduce = vllm_kunlun_all_reduce
 parallel_state.GroupCoordinator.all_gather = vllm_kunlun_all_gather
 
 
-from torch.library import custom_op, impl
+from typing import Optional
+
 import torch
-from vllm import _custom_ops as ops
-from typing import Optional, List
-import os
+from torch.library import custom_op, impl
 
 
 @custom_op("_C::rms_norm", mutates_args=())
@@ -618,7 +618,6 @@ split_norm_rope_neox.register_fake(_fake_split_norm_rope_neox)
 
 # register fake op impl here
 # for torch.dynamo
-from torch.library import register_fake
 
 if hasattr(torch.ops.custom_ops, "fc_fusion"):
 
@@ -2341,34 +2340,28 @@ dequant_int4.register_fake(_fake_dequant_int4)
 ##################################################
 @custom_op("_C::fast_topkv2", mutates_args=())
 def fast_topkv2(
-        score: torch.Tensor, 
-        lengths: torch.Tensor, 
-        topk: Optional[int] = 2048) -> torch.Tensor:
+    score: torch.Tensor, lengths: torch.Tensor, topk: Optional[int] = 2048
+) -> torch.Tensor:
     assert topk == 2048, "fast_topkv2 only supports topk = 2048 by now"
-    topk_indices = xtorch_ops.fast_topkv2(
-        score=score,
-        lengths=lengths,
-        topk=topk)
+    topk_indices = xtorch_ops.fast_topkv2(score=score, lengths=lengths, topk=topk)
     return topk_indices
+
 
 @impl("_C::fast_topkv2", "CUDA")
 def fast_topkv2_cuda(
-        score: torch.Tensor, 
-        lengths: torch.Tensor, 
-        topk: Optional[int] = 2048) -> torch.Tensor:
+    score: torch.Tensor, lengths: torch.Tensor, topk: Optional[int] = 2048
+) -> torch.Tensor:
     assert topk == 2048, "fast_topkv2 only supports topk = 2048 by now"
-    topk_indices = xtorch_ops.fast_topkv2(
-        score=score,
-        lengths=lengths,
-        topk=topk)
+    topk_indices = xtorch_ops.fast_topkv2(score=score, lengths=lengths, topk=topk)
     return topk_indices
 
+
 def _fake_fast_topkv2(
-        score: torch.Tensor, 
-        lengths: torch.Tensor, 
-        topk: Optional[int] = 2048) -> torch.Tensor:
+    score: torch.Tensor, lengths: torch.Tensor, topk: Optional[int] = 2048
+) -> torch.Tensor:
     assert topk == 2048, "fast_topkv2 only supports topk = 2048 by now"
     topk_indices = score.new_empty((score.size(0), topk), dtype=torch.int32)
     return topk_indices
+
 
 fast_topkv2.register_fake(_fake_fast_topkv2)

@@ -41,14 +41,22 @@ jobs:
       - name: Run black
         if: steps.changed.outputs.files != ''
         run: |
-          black --check ${{ steps.changed.outputs.files }}
+          echo "${{ steps.changed.outputs.files }}" | xargs black --check
 
       - name: Run isort
         if: steps.changed.outputs.files != ''
         run: |
-          isort --check-only ${{ steps.changed.outputs.files }}
+          echo "${{ steps.changed.outputs.files }}" | xargs isort --check-only
 
       - name: Run ruff
         if: steps.changed.outputs.files != ''
         run: |
-          ruff check ${{ steps.changed.outputs.files }}
+          echo "${{ steps.changed.outputs.files }}" | xargs ruff check
+
+      - name: "pylint with action"
+        uses: davidslusser/actions_python_pylint@v1.0.0
+        with:
+          src: ${{ steps.changed.outputs.files }}
+          options: "--cov=src"
+          pip_install_command: "pip install -e .[dev]"
+          python_version: "3.10"
