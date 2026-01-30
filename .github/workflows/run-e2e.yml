@@ -41,7 +41,7 @@ jobs:
           bash ci/scripts/docker/start_docker.sh
 
       - name: Install enviroments
-        env: 
+        env:
           PROXY_URL: ${{ secrets.PROXY_URL }}
           NO_PROXY_LIST: ${{ secrets.NO_PROXY_LIST }}
         run: |
@@ -149,7 +149,7 @@ jobs:
       #               --ignore-eos
       #       done
       #     '
-      
+
       - name: Set permissions
         if: always()
         run: |

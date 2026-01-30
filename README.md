@@ -22,8 +22,8 @@ By utilizing the vLLM Kunlun plugin, popular open-source models, including Trans
 ---
 ## Prerequisites
 
-- **Hardware**: Kunlun3 P800 
-- **OS**: Ubuntu 22.04 
+- **Hardware**: Kunlun3 P800
+- **OS**: Ubuntu 22.04
 - **Software**:
   - Python >=3.10
   - PyTorch ≥ 2.5.1
@@ -184,13 +184,10 @@ By utilizing the vLLM Kunlun plugin, popular open-source models, including Trans
   </tbody>
 </table>
 
-
-
 ## Performance Visualization 🚀
 ### High-performance computing at work: How different models perform on the Kunlun3 P800.
 
 Current environment: 16-way concurrency, input/output size 2048.
-
 
 ![Models and tgs](./vllm_kunlun/patches/performance.png)
 

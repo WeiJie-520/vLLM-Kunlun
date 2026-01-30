@@ -17,21 +17,23 @@
 # limitations under the License.
 
 from typing import Optional
+
 import torch
-from vllm.model_executor.layers.quantization.base_config import QuantizeMethodBase
 from vllm.model_executor.layers.fused_moe import FusedMoE
 from vllm.model_executor.layers.linear import (
     LinearBase,
     LinearMethodBase,
     UnquantizedLinearMethod,
 )
+from vllm.model_executor.layers.quantization.base_config import QuantizeMethodBase
 from vllm.model_executor.layers.quantization.compressed_tensors.compressed_tensors import (
     CompressedTensorsConfig,
-    CompressedTensorsLinearMethod,
     CompressedTensorsKVCacheMethod,
+    CompressedTensorsLinearMethod,
     CompressedTensorsLinearTransformMethod,
     get_linear_transform_schemes,
 )
+
 from vllm_kunlun.ops.quantization.compressed_tensors.compressed_tensors_moe import (
     KunlunCompressedTensorsMoEMethod,
 )

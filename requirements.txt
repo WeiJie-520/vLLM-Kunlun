@@ -29,7 +29,7 @@ uvloop==0.21.0
 prometheus-fastapi-instrumentator==7.1.0
 transformers==4.57.0
 
-# basic 
+# basic
 hatchling>=1.25
 build>=1.0.3
 pytest

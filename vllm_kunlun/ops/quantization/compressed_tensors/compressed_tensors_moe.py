@@ -19,18 +19,18 @@
 from typing import Callable, Optional, Union
 
 import torch
-from vllm.logger import init_logger
 from compressed_tensors.quantization import ActivationOrdering, QuantizationStrategy
+from vllm.logger import init_logger
 from vllm.model_executor.layers.fused_moe import FusedMoEConfig, FusedMoEMethodBase
 from vllm.model_executor.layers.quantization.compressed_tensors.compressed_tensors_moe import (
     CompressedTensorsW4A4MoeMethod,
     CompressedTensorsW4A8Int8MoEMethod,
-    CompressedTensorsW8A8Int8MoEMethod,
-    CompressedTensorsW8A8Int8MoEMethod,
     CompressedTensorsW8A8Fp8MoEMethod,
+    CompressedTensorsW8A8Int8MoEMethod,
     CompressedTensorsWNA16MoEMethod,
     find_matched_target,
 )
+
 from vllm_kunlun.ops._kunlun_ops import KunlunOps as ops
 from vllm_kunlun.ops.quantization.kernels.quant_ops import dequant_int4_native
 
@@ -38,7 +38,6 @@ logger = init_logger(__name__)
 
 
 class KunlunCompressedTensorsMoEMethod(FusedMoEMethodBase):
-
     def __init_(self, moe: FusedMoEConfig):
         super().__init__(moe)
 
@@ -88,7 +87,7 @@ class KunlunCompressedTensorsMoEMethod(FusedMoEMethodBase):
                     "WNA16MoE is not supported with actorder=group/dynamic."
                 )
             # MarlinMoE kernel is not supported on XPU.
-            logger.warning_once(f"Using KunlunCompressedTensorsWNA16MoEMethod")
+            logger.warning_once("Using KunlunCompressedTensorsWNA16MoEMethod")
             return KunlunCompressedTensorsWNA16MoEMethod(quant_config, layer.moe_config)
         elif quant_config._is_fp4a4_nvfp4(weight_quant, input_quant):
             return CompressedTensorsW4A4MoeMethod(layer.moe_config)
@@ -111,7 +110,6 @@ class KunlunCompressedTensorsMoEMethod(FusedMoEMethodBase):
 
 
 class KunlunCompressedTensorsW8A8Int8MoEMethod(CompressedTensorsW8A8Int8MoEMethod):
-
     def process_weights_after_loading(self, layer: torch.nn.Module) -> None:
         # NOTE: xtorch_ops use max as scale
         with torch.no_grad():
@@ -289,7 +287,6 @@ class KunlunCompressedTensorsW8A8Int8MoEMethod(CompressedTensorsW8A8Int8MoEMetho
 
 
 class KunlunCompressedTensorsWNA16MoEMethod(CompressedTensorsWNA16MoEMethod):
-
     def apply(
         self,
         layer: torch.nn.Module,
@@ -322,7 +319,7 @@ class KunlunCompressedTensorsWNA16MoEMethod(CompressedTensorsWNA16MoEMethod):
             weight_packed_uint8=layer.w2_weight_packed,
             scale=self.moe_quant_config.w2_scale,
         )
-        
+
         if self.moe.use_ep:
             return ops.fused_moe_ep(
                 x,

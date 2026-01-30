@@ -1,12 +1,19 @@
 """worker"""
-from typing import Dict, List, Optional, Set, Tuple, Type, Union
-from vllm.v1.worker.gpu_worker import Worker, _check_if_gpu_supports_dtype, init_worker_distributed_environment
-from vllm.model_executor import set_random_seed
-from .model_runner import KunlunModelRunner
-from vllm.utils import MemorySnapshot
-import torch
-import os
+
 import gc
+import os
+
+import torch
+from vllm.model_executor import set_random_seed
+from vllm.utils import MemorySnapshot
+from vllm.v1.worker.gpu_worker import (
+    Worker,
+    _check_if_gpu_supports_dtype,
+    init_worker_distributed_environment,
+)
+
+from .model_runner import KunlunModelRunner
+
 
 class KunlunWorker(Worker):
     """Worker"""
@@ -30,21 +37,20 @@ class KunlunWorker(Worker):
             gc.collect()
             torch.cuda.empty_cache()
             torch.cuda.reset_peak_memory_stats()
-            self.init_snapshot = MemorySnapshot() 
+            self.init_snapshot = MemorySnapshot()
             free_memory, total = torch.cuda.mem_get_info()
             self.init_gpu_memory = free_memory
             # 设置一个合理的初始值，比如总内存的 80%
             self.requested_memory = int(total * 0.2)  # 留出 20% 的余量
         else:
-            raise RuntimeError(
-                f"Not support device type: {self.device_config.device}")
+            raise RuntimeError(f"Not support device type: {self.device_config.device}")
         # Initialize the distributed environment.
-        init_worker_distributed_environment(self.vllm_config, 
-                                            self.rank,
-                                            self.distributed_init_method,
-                                            self.local_rank)
+        init_worker_distributed_environment(
+            self.vllm_config, self.rank, self.distributed_init_method, self.local_rank
+        )
         # Set random seed.
         set_random_seed(self.model_config.seed)
         # Construct the model runner
         self.model_runner: KunlunModelRunner = KunlunModelRunner(
-            self.vllm_config, self.device)
+            self.vllm_config, self.device
+        )

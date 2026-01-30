@@ -11,7 +11,6 @@
 from typing import Optional
 
 import torch
-
 from vllm.triton_utils import tl, triton
 
 from .index import prepare_chunk_indices
@@ -28,12 +27,14 @@ RESOLUTION = {
     torch.complex64: 1.3e-6,
 }
 
+
 def assert_close(res, ref, dtype, equal_nan=False, reduce_dim=1):
     assert res.dtype == dtype
     ref = ref.to(dtype)
     atol = 1e-3 * reduce_dim
     rtol = RESOLUTION[dtype]
     torch.testing.assert_close(res, ref, atol=atol, rtol=rtol, equal_nan=equal_nan)
+
 
 @triton.heuristics({"IS_VARLEN": lambda args: args["cu_seqlens"] is not None})
 # @triton.autotune(
@@ -68,19 +69,21 @@ def recompute_u_fwd_kernel(
     i_t, i_bh = tl.program_id(0), tl.program_id(1)
     i_b, i_h = i_bh // H, i_bh % H
     if IS_VARLEN:
-        i_n, i_t = tl.load(chunk_indices + i_t * 2).to(tl.int32), tl.load(
-            chunk_indices + i_t * 2 + 1
-        ).to(tl.int32)
-        bos, eos = tl.load(cu_seqlens + i_n).to(tl.int32), tl.load(
-            cu_seqlens + i_n + 1
-        ).to(tl.int32)
+        i_n, i_t = (
+            tl.load(chunk_indices + i_t * 2).to(tl.int32),
+            tl.load(chunk_indices + i_t * 2 + 1).to(tl.int32),
+        )
+        bos, eos = (
+            tl.load(cu_seqlens + i_n).to(tl.int32),
+            tl.load(cu_seqlens + i_n + 1).to(tl.int32),
+        )
         T = eos - bos
     else:
         bos, eos = i_b * T, i_b * T + T
     p_beta = tl.make_block_ptr(
         beta + bos * H + i_h, (T,), (H,), (i_t * BT,), (BT,), (0,)
     )
-    p_g = tl.make_block_ptr(g + (bos * H + i_h), (T,), (H,), (i_t * BT,), (BT,), (0,))
+    tl.make_block_ptr(g + (bos * H + i_h), (T,), (H,), (i_t * BT,), (BT,), (0,))
     p_A = tl.make_block_ptr(
         A + (bos * H + i_h) * BT, (T, BT), (H * BT, 1), (i_t * BT, 0), (BT, BT), (1, 0)
     )
@@ -108,7 +111,6 @@ def recompute_u_fwd_kernel(
         b_vb = (b_v * b_beta[:, None]).to(b_v.dtype)
         b_u = tl.dot(b_A, b_vb, allow_tf32=False)
         tl.store(p_u, b_u.to(p_u.dtype.element_ty), boundary_check=(0, 1))
-
 
 
 @triton.heuristics({"IS_VARLEN": lambda args: args["cu_seqlens"] is not None})
@@ -144,12 +146,14 @@ def recompute_w_fwd_kernel(
     i_t, i_bh = tl.program_id(0), tl.program_id(1)
     i_b, i_h = i_bh // H, i_bh % H
     if IS_VARLEN:
-        i_n, i_t = tl.load(chunk_indices + i_t * 2).to(tl.int32), tl.load(
-            chunk_indices + i_t * 2 + 1
-        ).to(tl.int32)
-        bos, eos = tl.load(cu_seqlens + i_n).to(tl.int32), tl.load(
-            cu_seqlens + i_n + 1
-        ).to(tl.int32)
+        i_n, i_t = (
+            tl.load(chunk_indices + i_t * 2).to(tl.int32),
+            tl.load(chunk_indices + i_t * 2 + 1).to(tl.int32),
+        )
+        bos, eos = (
+            tl.load(cu_seqlens + i_n).to(tl.int32),
+            tl.load(cu_seqlens + i_n + 1).to(tl.int32),
+        )
         T = eos - bos
     else:
         bos, eos = i_b * T, i_b * T + T
@@ -199,8 +203,9 @@ def recompute_w_u_fwd(
     H = v.shape[-2]
     BT = A.shape[-1]
 
-    chunk_indices = prepare_chunk_indices(
-        cu_seqlens, BT) if cu_seqlens is not None else None
+    chunk_indices = (
+        prepare_chunk_indices(cu_seqlens, BT) if cu_seqlens is not None else None
+    )
     NT = triton.cdiv(T, BT) if cu_seqlens is None else len(chunk_indices)
     BK = 64
     BV = 64

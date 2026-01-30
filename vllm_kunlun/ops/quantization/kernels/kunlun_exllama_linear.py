@@ -19,15 +19,13 @@
 from typing import Optional
 
 import torch
-import xspeedgate_ops
 from vllm.model_executor.layers.quantization.kernels.mixed_precision import (
-    ExllamaLinearKernel,
     _POSSIBLE_KERNELS,
+    ExllamaLinearKernel,
 )
 
 
 class KunlunExllamaLinearKernel(ExllamaLinearKernel):
-
     def apply_weights(
         self,
         layer: torch.nn.Module,
