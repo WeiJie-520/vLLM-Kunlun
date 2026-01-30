@@ -22,16 +22,18 @@ Punica: Multi-Tenant LoRA Serving.
 https://arxiv.org/abs/2310.18547
 """
 
-from typing import TYPE_CHECKING, Optional, Union, final
+from typing import Optional, Union
 
 import torch
+
 # Disable torchdynamo for all functions in this file
 torch._dynamo.config.disable = True
 
 
 # SPDX-License-Identifier: Apache-2.0
-from typing import Callable, Optional, Tuple, Union
+from typing import Callable, Tuple
 
+from vllm.lora.punica_wrapper.punica_base import PunicaWrapperBase
 
 from vllm_kunlun.lora.ops.kunlun_ops import (
     bgmv_expand,
@@ -41,8 +43,6 @@ from vllm_kunlun.lora.ops.kunlun_ops import (
     sgmv_expand_slice,
     sgmv_shrink,
 )
-
-from vllm.lora.punica_wrapper.punica_base import PunicaWrapperBase
 
 
 # The platforms that are compatible with the PyTorch-native implementation can
@@ -71,7 +71,6 @@ class PunicaWrapperKunlun(PunicaWrapperBase):
         moe_index: torch.Tensor,
         scale: float,
     ):
-
         expert_m = torch.zeros(9, dtype=torch.int32, device=x.device)
 
         sgmv_shrink(
@@ -96,7 +95,6 @@ class PunicaWrapperKunlun(PunicaWrapperBase):
         moe_index: torch.Tensor,
         scale: float,
     ):
-
         expert_m = torch.zeros(9, dtype=torch.int32, device=x.device)
         bgmv_shrink(
             x,
@@ -120,7 +118,6 @@ class PunicaWrapperKunlun(PunicaWrapperBase):
         moe_index: torch.Tensor,
         add_inputs: bool,
     ):
-
         sgmv_expand(
             x,
             w_t_all,
@@ -165,7 +162,6 @@ class PunicaWrapperKunlun(PunicaWrapperBase):
         y_slice_size: int,
         add_inputs: bool,
     ):
-
         normed_scale = torch.ones([y.size(0), 1], dtype=torch.float32, device=x.device)
 
         sgmv_expand_slice(
@@ -194,7 +190,6 @@ class PunicaWrapperKunlun(PunicaWrapperBase):
         y_slice_size: int,
         add_inputs: bool,
     ):
-
         normed_scale = torch.ones([y.size(0), 1], dtype=torch.float32, device=x.device)
 
         bgmv_expand_slice(
@@ -307,7 +302,6 @@ class PunicaWrapperKunlun(PunicaWrapperBase):
         x = x.view(-1, x.shape[-1])
 
         for slice_idx in range(len(lora_a_stacked)):  # Each slice represents a layer
-
             self._apply_shrink(
                 y[slice_idx],
                 x,

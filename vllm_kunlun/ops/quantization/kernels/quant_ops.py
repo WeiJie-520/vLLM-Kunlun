@@ -26,7 +26,6 @@ def dequant_int4(
     int4_signed: bool = False,
     use_mode_fast: bool = False,
 ) -> torch.Tensor:
-
     fpweight = torch.empty(
         (
             qweight.shape[0],

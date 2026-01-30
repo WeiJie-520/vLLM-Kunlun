@@ -16,15 +16,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import torch
-from typing import Optional, Callable, Union
+from typing import Callable, Optional, Union
 
+import torch
 from vllm.distributed import get_tp_group
 from vllm.model_executor.layers.quantization.moe_wna16 import MoeWNA16Method
 from vllm.model_executor.utils import set_weight_attrs
 
-from vllm_kunlun.ops.quantization.kernels.quant_ops import dequant_int4
 from vllm_kunlun.ops._kunlun_ops import KunlunOps as ops
+from vllm_kunlun.ops.quantization.kernels.quant_ops import dequant_int4
 
 
 def convert_awq_tensor_for_kunlun(
@@ -50,7 +50,6 @@ def convert_awq_tensor_for_kunlun(
     )
 
     if tensor_type == "qweight":  # pack weight
-
         if align_type == 0:  # normal mode
             # Unpack AWQ order:[0, 2, 4, 6, 1, 3, 5, 7]
             unpacked_awq = (packed.unsqueeze(-1) >> shifts_from_int32) & 0xF
@@ -105,7 +104,6 @@ def convert_awq_tensor_for_kunlun(
 
 
 class KunlunMoeWNA16Method(MoeWNA16Method):
-
     def create_weights(
         self,
         layer: torch.nn.Module,
@@ -115,7 +113,6 @@ class KunlunMoeWNA16Method(MoeWNA16Method):
         params_dtype: torch.dtype,
         **extra_weight_attrs,
     ):
-
         super().create_weights(
             layer,
             num_experts,
@@ -160,11 +157,9 @@ class KunlunMoeWNA16Method(MoeWNA16Method):
 
     @staticmethod
     def get_weight_loader(layer, weight_loader):
-
         def patched_moe_wna16_weight_loader(
             param, loaded_weight, weight_name, shard_id, expert_id, return_success=False
         ):
-
             if "g_idx" in weight_name:
                 return False if return_success else None
             if not layer.quant_config.has_zp and "qzeros" in weight_name:
@@ -179,7 +174,6 @@ class KunlunMoeWNA16Method(MoeWNA16Method):
                 assert layer.quant_config.weight_bits == 4
 
                 if "weight" in weight_name:
-
                     # TODO(hack): Temporary workaround for a packing conflict between
                     # dequant_int4 and tensor-parallel (TP) sharding. When align_type=1,
                     # the weights cannot be packed correctly after TP slicing, leading
@@ -238,7 +232,6 @@ class KunlunMoeWNA16Method(MoeWNA16Method):
         logical_to_physical_map: Optional[torch.Tensor] = None,
         logical_replica_count: Optional[torch.Tensor] = None,
     ) -> Union[torch.Tensor, tuple[torch.Tensor, torch.Tensor]]:
-
         w13_weight = dequant_int4(
             qweight=layer.w13_qweight,
             scale=self.moe_quant_config.w1_scale,
@@ -254,7 +247,7 @@ class KunlunMoeWNA16Method(MoeWNA16Method):
             int4_signed=False,
             use_mode_fast=layer.align_type,
         )
-        
+
         if self.moe.use_ep:
             return ops.fused_moe_ep(
                 x,

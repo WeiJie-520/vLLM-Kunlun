@@ -44,7 +44,6 @@ print("ffece:eee")
 
 
 class InternVisionEmbeddings(nn.Module):
-
     def __init__(self, config: PretrainedConfig):
         super().__init__()
         self.config = config
@@ -113,7 +112,6 @@ class InternVisionEmbeddings(nn.Module):
 
 
 class InternVisionPatchModel(nn.Module):
-
     def __init__(self, config: PretrainedConfig):
         super().__init__()
         self.config = config
@@ -226,7 +224,6 @@ class InternParallelAttention(nn.Module):
         return q, k
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-
         B, N, _ = x.shape
         qkv, _ = self.qkv(x)
         q, k, v = qkv.chunk(3, dim=-1)
@@ -308,7 +305,6 @@ class InternSdpaAttention(nn.Module):
 
 
 class InternMLP(nn.Module):
-
     def __init__(
         self,
         config: PretrainedConfig,
@@ -346,7 +342,6 @@ class InternMLP(nn.Module):
 
 
 class InternVisionEncoderLayer(nn.Module):
-
     def __init__(
         self,
         config: PretrainedConfig,
@@ -417,7 +412,6 @@ class InternVisionEncoderLayer(nn.Module):
 
 
 class InternVisionEncoder(nn.Module):
-
     def __init__(
         self,
         config: PretrainedConfig,
@@ -451,7 +445,6 @@ class InternVisionEncoder(nn.Module):
         )
 
     def forward(self, inputs_embeds: torch.Tensor):
-
         hidden_states = inputs_embeds
         for encoder_layer in self.layers:
             hidden_states = encoder_layer(hidden_states)
@@ -460,7 +453,6 @@ class InternVisionEncoder(nn.Module):
 
 
 class InternVisionModel(nn.Module):
-
     packed_modules_mapping = {
         "qkv": ["qkv"],
     }

@@ -93,10 +93,7 @@ from vllm.v1.attention.backends.gdn_attn import GDNAttentionMetadata
 from vllm_kunlun.ops._kunlun_ops import KunlunOps as ops
 from vllm_kunlun.ops.activation import SiluAndMul
 from vllm_kunlun.ops.attention.layer import Attention
-from vllm_kunlun.ops.fla import (
-    chunk_gated_delta_rule,
-    fused_recurrent_gated_delta_rule,
-)
+from vllm_kunlun.ops.fla import chunk_gated_delta_rule, fused_recurrent_gated_delta_rule
 from vllm_kunlun.ops.mamba.causal_conv1d import causal_conv1d_fn, causal_conv1d_update
 
 
@@ -136,7 +133,6 @@ KVCache = tuple[torch.Tensor, torch.Tensor]
 
 
 class Qwen3NextMLP(nn.Module):
-
     def __init__(
         self,
         hidden_size: int,
@@ -164,8 +160,7 @@ class Qwen3NextMLP(nn.Module):
         )
         if hidden_act != "silu":
             raise ValueError(
-                f"Unsupported activation: {hidden_act}. "
-                "Only silu is supported for now."
+                f"Unsupported activation: {hidden_act}. Only silu is supported for now."
             )
         self.act_fn = SiluAndMul()
 
@@ -177,7 +172,6 @@ class Qwen3NextMLP(nn.Module):
 
 
 class Qwen3NextSparseMoeBlock(nn.Module):
-
     def __init__(self, vllm_config: VllmConfig, prefix: str = ""):
         super().__init__()
 
@@ -295,7 +289,6 @@ class Qwen3NextSparseMoeBlock(nn.Module):
 
 
 class Qwen3NextGatedDeltaNet(nn.Module, MambaBase):
-
     @property
     def mamba_type(self) -> str:
         return "linear_attention"
@@ -779,7 +772,6 @@ class Qwen3NextGatedDeltaNet(nn.Module, MambaBase):
 
 
 class Qwen3NextAttention(nn.Module):
-
     def __init__(
         self,
         config: Qwen3NextConfig,
@@ -902,7 +894,6 @@ class Qwen3NextAttention(nn.Module):
 
 
 class Qwen3NextDecoderLayer(nn.Module):
-
     def __init__(
         self,
         vllm_config: VllmConfig,
@@ -1045,7 +1036,6 @@ class Qwen3NextDecoderLayer(nn.Module):
 
 @support_torch_compile
 class Qwen3NextModel(nn.Module):
-
     def __init__(self, *, vllm_config: VllmConfig, prefix: str = ""):
         super().__init__()
 

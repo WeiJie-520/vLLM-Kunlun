@@ -4,7 +4,6 @@ from typing import Optional
 
 import torch
 import xtorch_ops
-from vllm.platforms import current_platform
 
 
 def merge_attn_states(
@@ -15,12 +14,6 @@ def merge_attn_states(
     suffix_lse: torch.Tensor,
     output_lse: Optional[torch.Tensor] = None,
 ) -> None:
-
     return xtorch_ops.attention_merge_stage(
-        prefix_output,
-        prefix_lse,
-        suffix_output,
-        suffix_lse,
-        output,
-        output_lse
+        prefix_output, prefix_lse, suffix_output, suffix_lse, output, output_lse
     )

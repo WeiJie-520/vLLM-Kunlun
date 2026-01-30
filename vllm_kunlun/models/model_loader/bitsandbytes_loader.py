@@ -1,10 +1,9 @@
-class BitsAndBytesModelLoader():
+class BitsAndBytesModelLoader:
     """Model loader to load model weights with BitAndBytes quantization."""
 
     possible_config_file_names = ["adapter_config.json"]
 
     def __init__(self):
-
         # Save the module names without sharding.
         self.unsharded_weights_modules: list[str] = []
         # Save the module names that are sharded by column.

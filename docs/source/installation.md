@@ -4,7 +4,7 @@ This document describes how to install vllm-kunlun manually.
 
 ## Requirements
 
-- **OS**: Ubuntu 22.04 
+- **OS**: Ubuntu 22.04
 - **Software**:
   - Python >=3.10
   - PyTorch ≥ 2.5.1
@@ -20,6 +20,7 @@ We provide a clean, minimal base image for your use`wjie520/vllm_kunlun:base_v0.
 ::::{tab-item} start_docker.sh
 :selected:
 :sync: pip
+
 ```{code-block} bash
    :substitutions:
 #!/bin/bash
@@ -44,15 +45,19 @@ docker run -itd ${DOCKER_DEVICE_CONFIG} \
     -w /workspace \
     "$build_image" /bin/bash
 ```
+
 ::::
 :::::
 ## Install vLLM-kunlun
 ### Install vLLM 0.11.0
+
 ```
 uv pip install vllm==0.11.0 --no-build-isolation --no-deps
 ```
+
 ### Build and Install
 Navigate to the vllm-kunlun directory and build the package:
+
 ```
 git clone https://github.com/baidu/vLLM-Kunlun
 
@@ -65,6 +70,7 @@ python setup.py build
 python setup.py install
 
 ```
+
 ## Quick Start
 
 ### Set up the environment
@@ -80,6 +86,7 @@ chmod +x /workspace/vLLM-Kunlun/setup_env.sh && source /workspace/vLLM-Kunlun/se
 ::::{tab-item} start_service.sh
 :selected:
 :sync: pip
+
 ```{code-block} bash
    :substitutions:
 python -m vllm.entrypoints.openai.api_server \
@@ -98,55 +105,66 @@ python -m vllm.entrypoints.openai.api_server \
       --no-enable-chunked-prefill \
       --distributed-executor-backend mp \
       --served-model-name Qwen3-VL-30B-A3B-Instruct \
-      --compilation-config '{"splitting_ops": ["vllm.unified_attention", 
+      --compilation-config '{"splitting_ops": ["vllm.unified_attention",
                                                 "vllm.unified_attention_with_output",
                                                 "vllm.unified_attention_with_output_kunlun",
-                                                "vllm.mamba_mixer2", 
-                                                "vllm.mamba_mixer", 
-                                                "vllm.short_conv", 
-                                                "vllm.linear_attention", 
-                                                "vllm.plamo2_mamba_mixer", 
-                                                "vllm.gdn_attention", 
+                                                "vllm.mamba_mixer2",
+                                                "vllm.mamba_mixer",
+                                                "vllm.short_conv",
+                                                "vllm.linear_attention",
+                                                "vllm.plamo2_mamba_mixer",
+                                                "vllm.gdn_attention",
                                                 "vllm.sparse_attn_indexer"]}'
 
 ```
+
 ::::
 :::::
-
 
 ### xpytorch and ops install
 We also provide xpytorch and ops link for custom installation.
 
 ### Replace eval_frame.py
 Copy the eval_frame.py patch:
+
 ```
 cp vllm_kunlun/patches/eval_frame.py /root/miniconda/envs/vllm_kunlun_0.10.1.1/lib/python3.10/site-packages/torch/_dynamo/eval_frame.py
 ```
+
 ## Install the KL3-customized build of PyTorch
+
 ```
 wget -O xpytorch-cp310-torch251-ubuntu2004-x64.run https://baidu-kunlun-public.su.bcebos.com/v1/baidu-kunlun-share/1130/xpytorch-cp310-torch251-ubuntu2004-x64.run?authorization=bce-auth-v1%2FALTAKypXxBzU7gg4Mk4K4c6OYR%2F2025-12-02T05%3A01%3A27Z%2F-1%2Fhost%2Ff3cf499234f82303891aed2bcb0628918e379a21e841a3fac6bd94afef491ff7
 bash xpytorch-cp310-torch251-ubuntu2004-x64.run
 ```
+
 ## Install the KL3-customized build of PyTorch(Only MIMO V2)
+
 ```
 wget -O xpytorch-cp310-torch251-ubuntu2004-x64.run https://klx-sdk-release-public.su.bcebos.com/kunlun2aiak_output/1231/xpytorch-cp310-torch251-ubuntu2004-x64.run
 bash xpytorch-cp310-torch251-ubuntu2004-x64.run
 ```
 
 ## Install custom ops
+
 ```
 pip install "https://baidu-kunlun-public.su.bcebos.com/v1/baidu-kunlun-share/1130/xtorch_ops-0.1.2209%2B6752ad20-cp310-cp310-linux_x86_64.whl?authorization=bce-auth-v1%2FALTAKypXxBzU7gg4Mk4K4c6OYR%2F2025-12-05T06%3A18%3A00Z%2F-1%2Fhost%2F14936c2b7e7c557c1400e4c467c79f7a9217374a7aa4a046711ac4d948f460cd"
 ```
+
 ## Install custom ops(Only MIMO V2)
+
 ```
 pip install "https://vllm-ai-models.bj.bcebos.com/v1/vLLM-Kunlun/ops/swa/xtorch_ops-0.1.2109%252B523cb26d-cp310-cp310-linux_x86_64.whl"
 ```
 
 ## Install the KLX3 custom Triton build
+
 ```
 pip install "https://cce-ai-models.bj.bcebos.com/v1/vllm-kunlun-0.11.0/triton-3.0.0%2Bb2cde523-cp310-cp310-linux_x86_64.whl"
 ```
+
 ## Install the AIAK custom ops library
+
 ```
 pip install "https://cce-ai-models.bj.bcebos.com/XSpeedGate-whl/release_merge/20251219_152418/xspeedgate_ops-0.0.0-cp310-cp310-linux_x86_64.whl"
 ```

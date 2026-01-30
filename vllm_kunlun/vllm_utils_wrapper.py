@@ -88,7 +88,7 @@ def direct_register_custom_op(
     import torch.library
 
     if hasattr(torch.library, "infer_schema"):
-        patched_func = patch_annotations_for_schema(op_func)
+        patch_annotations_for_schema(op_func)
         schema_str = torch.library.infer_schema(op_func, mutates_args=mutates_args)
     else:
         # for pytorch 2.4
@@ -1395,7 +1395,7 @@ def awq_dequantize_cuda(
         device=qweight.device,
     )
     group_m = int(qweight.shape[0] / scales.shape[0])
-    out = xtorch_ops.awq_dequantize(
+    xtorch_ops.awq_dequantize(
         qweight=qweight,
         scales=scales,
         zeros=zeros,

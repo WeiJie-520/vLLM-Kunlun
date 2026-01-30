@@ -18,13 +18,13 @@
 from typing import Callable, Optional
 
 import torch
-from vllm.model_executor.layers.quantization.compressed_tensors.utils import (
-    should_ignore_layer,
+from vllm.model_executor.layers.fused_moe.layer import (
+    FusedMoE,
+    UnquantizedFusedMoEMethod,
 )
 from vllm.model_executor.layers.quantization.base_config import QuantizationConfig
-from vllm.model_executor.layers.fused_moe.layer import (
-    UnquantizedFusedMoEMethod,
-    FusedMoE,
+from vllm.model_executor.layers.quantization.compressed_tensors.utils import (
+    should_ignore_layer,
 )
 
 

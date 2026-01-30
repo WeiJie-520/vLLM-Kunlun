@@ -1,14 +1,17 @@
 # SPDX-License-Identifier: Apache-2.0
 """Custom activation functions."""
+
 import math
 from typing import Optional
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
-from vllm.distributed import (divide, get_tensor_model_parallel_rank,
-                              get_tensor_model_parallel_world_size)
+from vllm.distributed import (
+    divide,
+    get_tensor_model_parallel_rank,
+    get_tensor_model_parallel_world_size,
+)
 from vllm.model_executor.custom_op import CustomOp
 from vllm.model_executor.layers.quantization import QuantizationConfig
 from vllm.model_executor.utils import set_weight_attrs
@@ -29,13 +32,13 @@ class FatreluAndMul(CustomOp):
         return: (num_tokens, d) or (batch_size, seq_len, d)
     """
 
-    def __init__(self, threshold: float = 0.):
+    def __init__(self, threshold: float = 0.0):
         """
             Initializes the instance.
-        
+
         Args:
             threshold (float, optional): Threshold value for the filter. Defaults to 0..
-        
+
         Returns:
             None: This method does not return anything.
         """
@@ -46,11 +49,11 @@ class FatreluAndMul(CustomOp):
         """
         计算输入张量的正向传播，并返回一个新的张量。
             该函数实现了原生的前向传播过程，即对输入张量进行阈值化处理后，将其乘以另一个张量。
-        
+
             Args:
                 x (torch.Tensor, shape=[*, d]):
                     输入张量，其中*表示任意维度，d为特征维度。
-        
+
             Returns:
                 torch.Tensor, shape=[*, d]:
                     返回一个新的张量，其形状与输入张量相同，除了最后一个维度被设置为d/2。
@@ -65,10 +68,10 @@ class FatreluAndMul(CustomOp):
     def forward_cuda(self, x: torch.Tensor) -> torch.Tensor:
         """
         在CUDA设备上执行前向传播。
-        
+
         Args:
             x (torch.Tensor): 输入张量，形状为(N, C, H, W)。
-        
+
         Returns:
             torch.Tensor: 输出张量，形状为(N, C, H, W)。
         """
@@ -93,20 +96,18 @@ class SiluAndMul(CustomOp):
 
     def forward_cuda(self, x: torch.Tensor) -> torch.Tensor:
         """forward_cuda"""
-        import xtorch_ops
-        
+
         d = x.shape[-1] // 2
-        output_shape = (x.shape[:-1] + (d, ))
+        output_shape = x.shape[:-1] + (d,)
         out = torch.empty(output_shape, dtype=x.dtype, device=x.device)
         torch.ops._C.silu_and_mul(out, x)
         return out
 
     def forward_kunlun(self, x: torch.Tensor) -> torch.Tensor:
         """forward_kunlun"""
-        import xtorch_ops
-        
+
         d = x.shape[-1] // 2
-        output_shape = (x.shape[:-1] + (d, ))
+        output_shape = x.shape[:-1] + (d,)
         out = torch.empty(output_shape, dtype=x.dtype, device=x.device)
         torch.ops._C.silu_and_mul(out, x)
         return out
@@ -114,22 +115,22 @@ class SiluAndMul(CustomOp):
     def forward_xpu(self, x: torch.Tensor) -> torch.Tensor:
         """
             Apply the function on `x` using XPU backend.
-        
+
         Args:
             x (torch.Tensor): Input tensor of any shape. Must be a floating point tensor.
                 The number of channels should be even.
-        
+
         Returns:
             torch.Tensor: Output tensor with the same shape as input except the last dimension is reduced by half.
             It has the same dtype as the input and lives on the same device.
-        
+
         Raises:
             None
         """
         from vllm._ipex_ops import ipex_ops as ops
 
         d = x.shape[-1] // 2
-        output_shape = (x.shape[:-1] + (d, ))
+        output_shape = x.shape[:-1] + (d,)
         out = torch.empty(output_shape, dtype=x.dtype, device=x.device)
         ops.silu_and_mul(out, x)
         return out
@@ -173,6 +174,7 @@ class MulAndSilu(CustomOp):
             self.op = torch.ops._C.mul_and_silu
         elif current_platform.is_xpu():
             from vllm._ipex_ops import ipex_ops
+
             self.op = ipex_ops.silu_and_mul
         elif current_platform.is_cpu():
             self._forward_method = self.forward_native
@@ -185,18 +187,18 @@ class MulAndSilu(CustomOp):
     def forward_cuda(self, x: torch.Tensor) -> torch.Tensor:
         """
         在CUDA设备上执行前向传播操作。
-        
+
         Args:
             x (torch.Tensor): 输入张量，其形状应为（..., d），其中d是特征维度。
-        
+
         Returns:
             torch.Tensor: 输出张量，其形状与输入张量相同，但最后一个维度被替换为d/2。
-        
+
         Raises:
             无。
         """
         d = x.shape[-1] // 2
-        output_shape = (x.shape[:-1] + (d, ))
+        output_shape = x.shape[:-1] + (d,)
         out = torch.empty(output_shape, dtype=x.dtype, device=x.device)
         self.op(out, x)
         return out
@@ -219,11 +221,11 @@ class GeluAndMul(CustomOp):
     def __init__(self, approximate: str = "none"):
         """
             Initializes the instance.
-        
+
         Args:
             approximate (str, optional): The approximation method to use. Defaults to "none".
                 Can be one of "none", "tanh".
-        
+
         Raises:
             ValueError: If the `approximate` parameter is not one of "none", "tanh".
         """
@@ -240,29 +242,30 @@ class GeluAndMul(CustomOp):
     def forward_cuda(self, x: torch.Tensor) -> torch.Tensor:
         """
         在CUDA设备上进行前向传播。
-        
+
         Args:
             x (torch.Tensor): 输入张量，形状为（batch_size, ..., dim），其中dim是特征维度。
-        
+
         Returns:
             torch.Tensor: 输出张量，形状为（batch_size, ..., dim//2），其中dim是特征维度，除以2是因为GELU的输出是两个分量。
-        
+
         Raises:
             无。
         """
         # from vllm import _custom_ops as ops
         import xtorch_ops
+
         # d = x.shape[-1] // 2
         # output_shape = (x.shape[:-1] + (d, ))
         out = torch.empty(x, dtype=x.dtype, device=x.device)
         if self.approximate == "none":
             # ops.gelu_and_mul(out, x)
-            print(x,x.shape)
+            print(x, x.shape)
             xtorch_ops.gelu(x, out)
         elif self.approximate == "tanh":
             ops.gelu_tanh_and_mul(out, x)
         return out
-        
+
     def forward_native(self, x: torch.Tensor) -> torch.Tensor:
         d, _ = self._check_and_make_out(x)
         # 保守地用 contiguous，避免 view 相关坑
@@ -279,11 +282,11 @@ class GeluAndMul(CustomOp):
     def forward_xpu(self, x: torch.Tensor) -> torch.Tensor:
         """
             Apply gelu activation function on input tensor using iPEX backend.
-        
+
         Args:
             x (torch.Tensor): Input tensor with shape (N, C, H, W).
                 The data type can be float32 or float64.
-        
+
         Returns:
             torch.Tensor: Output tensor with the same shape and data type as input.
             The output will have a range of (-0.5, 0.5) for tanh approximation.
@@ -291,7 +294,7 @@ class GeluAndMul(CustomOp):
         from vllm._ipex_ops import ipex_ops as ops
 
         d = x.shape[-1] // 2
-        output_shape = (x.shape[:-1] + (d, ))
+        output_shape = x.shape[:-1] + (d,)
         out = torch.empty(output_shape, dtype=x.dtype, device=x.device)
         if self.approximate == "none":
             ops.gelu_and_mul(out, x)
@@ -303,32 +306,30 @@ class GeluAndMul(CustomOp):
         """
             返回一个字符串，包含有关模型的额外信息。这个函数可以被用于打印出模型的概要信息。
         默认情况下，这个函数会返回一个包含模型是否使用近似值（approximate）的信息。
-        
+
         Returns:
             str (str): 一个字符串，包含有关模型的额外信息。
         """
-        return f'approximate={repr(self.approximate)}'
+        return f"approximate={repr(self.approximate)}"
 
 
 @CustomOp.register("kunlun_gelu_new")
 class NewGELU(CustomOp):
-
     def forward_native(self, x: torch.Tensor) -> torch.Tensor:
         """PyTorch-native implementation equivalent to forward()."""
         c = math.sqrt(2.0 / math.pi)
-        return 0.5 * x * (1.0 + torch.tanh(c *
-                                           (x + 0.044715 * torch.pow(x, 3.0))))
+        return 0.5 * x * (1.0 + torch.tanh(c * (x + 0.044715 * torch.pow(x, 3.0))))
 
     def forward_cuda(self, x: torch.Tensor) -> torch.Tensor:
         """
         计算CUDA上的GELU函数。
-        
+
         Args:
             x (torch.Tensor): 输入张量，形状为(N, C, H, W)。
-        
+
         Returns:
             torch.Tensor: GELU函数的结果，形状与输入相同。
-        
+
         Raises:
             无。
         """
@@ -341,13 +342,13 @@ class NewGELU(CustomOp):
     def forward_xpu(self, x: torch.Tensor) -> torch.Tensor:
         """
             Apply the GELU activation function element-wise.
-        
+
         Args:
             x (torch.Tensor): Input tensor with any shape. The data type is float32 or float64.
-        
+
         Returns:
             torch.Tensor: Output tensor with the same shape as input. The data type is the same as input.
-        
+
         Raises:
             None
         """
@@ -358,23 +359,21 @@ class NewGELU(CustomOp):
 
 @CustomOp.register("kunlun_gelu_fast")
 class FastGELU(CustomOp):
-
     def forward_native(self, x: torch.Tensor) -> torch.Tensor:
         """PyTorch-native implementation equivalent to forward()."""
-        return 0.5 * x * (1.0 + torch.tanh(x * 0.7978845608 *
-                                           (1.0 + 0.044715 * x * x)))
+        return 0.5 * x * (1.0 + torch.tanh(x * 0.7978845608 * (1.0 + 0.044715 * x * x)))
 
     def forward_cuda(self, x: torch.Tensor) -> torch.Tensor:
         """
             计算输入张量x的CUDA版本GELU（Gaussian Error Linear Unit）。
         该函数调用了vllm模块中的_custom_ops模块中的gelu_fast函数，完成GELU操作。
-        
+
         Args:
             x (torch.Tensor): 输入张量，形状为(N, C, H, W)，类型为float32或float64。
-        
+
         Returns:
             torch.Tensor: GELU后的输出张量，形状与x相同，类型与x相同。
-        
+
         Raises:
             无。
         """
@@ -387,15 +386,15 @@ class FastGELU(CustomOp):
     def forward_xpu(self, x: torch.Tensor) -> torch.Tensor:
         """
             Apply the GELU function element-wise on input tensor ``x``.
-        
+
         Args:
             x (torch.Tensor): Input tensor with any shape. The data type can be float or half float.
                 The range of the input values is expected to be -inf to inf.
-        
+
         Returns:
             torch.Tensor: Output tensor with the same shape and data type as input ``x``.
             The output values are in the range [-0.5, 0.5] for float dtype and [-15, 15] for half float dtype.
-        
+
         Raises:
             TypeError: If the input ``x`` is not a torch.Tensor.
             RuntimeError: If the input ``x`` contains non-finite numbers.
@@ -415,13 +414,13 @@ class QuickGELU(CustomOp):
     def forward_cuda(self, x: torch.Tensor) -> torch.Tensor:
         """
         使用CUDA设备进行前向计算。
-        
+
         Args:
             x (torch.Tensor): 输入张量，形状为（N, C, H, W）。
-        
+
         Returns:
             torch.Tensor: 输出张量，形状与输入相同，值为GELU函数的结果。
-        
+
         Raises:
             无。
         """
@@ -434,13 +433,13 @@ class QuickGELU(CustomOp):
     def forward_xpu(self, x: torch.Tensor) -> torch.Tensor:
         """
             Apply the GELU function element-wise on input tensor ``x``.
-        
+
         Args:
             x (torch.Tensor): Input tensor with any shape. The data type is float32 or float64.
-        
+
         Returns:
             torch.Tensor: Output tensor with the same shape and data type as input ``x``.
-        
+
         Raises:
             None
         """
@@ -453,6 +452,7 @@ class QuickGELU(CustomOp):
     def forward_kunlun(self, x: torch.Tensor) -> torch.Tensor:
         """forward_kunlun"""
         from vllm._kunlun_ops import KunlunOps as ops
+
         out = torch.empty_like(x)
         ops.quick_gelu(out, x)
         return out
@@ -471,13 +471,13 @@ class ReLUSquaredActivation(CustomOp):
     def forward_cuda(self, x: torch.Tensor) -> torch.Tensor:
         """
         在CUDA设备上执行前向传播。
-        
+
         Args:
             x (torch.Tensor): 输入张量，形状为(N, C, H, W)，数据类型为float32或float64。
-        
+
         Returns:
             torch.Tensor: 输出张量，形状与输入相同，数据类型与输入一致。
-        
+
         Raises:
             无。
         """
@@ -499,7 +499,7 @@ class ScaledActivation(nn.Module):
     ):
         """
             Initializes the LayerNorm module.
-        
+
         Args:
             act_module (nn.Module): The activation function to use after layer norm.
                 Default: nn.GELU()
@@ -514,23 +514,23 @@ class ScaledActivation(nn.Module):
         self.input_is_parallel = input_is_parallel
         if input_is_parallel:
             tp_size = get_tensor_model_parallel_world_size()
-            intermediate_size_per_partition = divide(intermediate_size,
-                                                     tp_size)
+            intermediate_size_per_partition = divide(intermediate_size, tp_size)
         else:
             intermediate_size_per_partition = intermediate_size
         if params_dtype is None:
             params_dtype = torch.get_default_dtype()
         self.scales = nn.Parameter(
-            torch.empty(intermediate_size_per_partition, dtype=params_dtype))
+            torch.empty(intermediate_size_per_partition, dtype=params_dtype)
+        )
         set_weight_attrs(self.scales, {"weight_loader": self.weight_loader})
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
         前向传播函数，将输入的张量进行缩放和激活操作。
-        
+
         Args:
             x (torch.Tensor): 输入张量，形状为（N, C, H, W）或者（N, C, H, W, D）。
-        
+
         Returns:
             torch.Tensor: 返回处理后的张量，形状与输入相同。
         """
@@ -555,24 +555,18 @@ class ScaledActivation(nn.Module):
         param_data.copy_(loaded_weight)
 
 
-_ACTIVATION_REGISTRY = LazyDict({
-    "gelu":
-    lambda: nn.GELU(),
-    "gelu_fast":
-    lambda: FastGELU(),
-    "gelu_new":
-    lambda: NewGELU(),
-    "gelu_pytorch_tanh":
-    lambda: nn.GELU(approximate="tanh"),
-    "relu":
-    lambda: nn.ReLU(),
-    "relu2":
-    lambda: ReLUSquaredActivation(),
-    "silu":
-    lambda: nn.SiLU(),
-    "quick_gelu":
-    lambda: QuickGELU(),
-})
+_ACTIVATION_REGISTRY = LazyDict(
+    {
+        "gelu": lambda: nn.GELU(),
+        "gelu_fast": lambda: FastGELU(),
+        "gelu_new": lambda: NewGELU(),
+        "gelu_pytorch_tanh": lambda: nn.GELU(approximate="tanh"),
+        "relu": lambda: nn.ReLU(),
+        "relu2": lambda: ReLUSquaredActivation(),
+        "silu": lambda: nn.SiLU(),
+        "quick_gelu": lambda: QuickGELU(),
+    }
+)
 
 
 def get_act_fn(
@@ -586,31 +580,33 @@ def get_act_fn(
     act_fn_name = act_fn_name.lower()
     # print(f"activation function name: {act_fn_name}")
     if act_fn_name not in _ACTIVATION_REGISTRY:
-        raise ValueError(
-            f"Activation function {act_fn_name!r} is not supported.")
+        raise ValueError(f"Activation function {act_fn_name!r} is not supported.")
 
     act_fn = _ACTIVATION_REGISTRY[act_fn_name]
-    if (quant_config is not None
-            and act_fn_name in quant_config.get_scaled_act_names()):
+    if quant_config is not None and act_fn_name in quant_config.get_scaled_act_names():
         if intermediate_size is None:
-            raise ValueError("intermediate_size must be specified for scaled "
-                             "activation functions.")
-        return ScaledActivation(act_fn, intermediate_size, input_is_parallel,
-                                params_dtype)
+            raise ValueError(
+                "intermediate_size must be specified for scaled activation functions."
+            )
+        return ScaledActivation(
+            act_fn, intermediate_size, input_is_parallel, params_dtype
+        )
     return act_fn
 
-_ACTIVATION_AND_MUL_REGISTRY = LazyDict({
-    "gelu": lambda: GeluAndMul(),
-    "silu": lambda: SiluAndMul(),
-    "geglu": lambda: GeluAndMul(),
-})
+
+_ACTIVATION_AND_MUL_REGISTRY = LazyDict(
+    {
+        "gelu": lambda: GeluAndMul(),
+        "silu": lambda: SiluAndMul(),
+        "geglu": lambda: GeluAndMul(),
+    }
+)
 
 
 def get_act_and_mul_fn(act_fn_name: str) -> nn.Module:
     """Get an activation-and-mul (i.e. SiluAndMul) function by name."""
     act_fn_name = act_fn_name.lower()
     if act_fn_name not in _ACTIVATION_AND_MUL_REGISTRY:
-        raise ValueError(
-            f"Activation function {act_fn_name!r} is not supported.")
+        raise ValueError(f"Activation function {act_fn_name!r} is not supported.")
 
     return _ACTIVATION_AND_MUL_REGISTRY[act_fn_name]

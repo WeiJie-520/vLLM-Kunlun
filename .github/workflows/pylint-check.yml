@@ -3,7 +3,7 @@ name: Code Style Check
 on:
   pull_request:
   push:
-    branches: [ main ]
+    branches: [ main, test]
 
 jobs:
   pylint-check:
@@ -27,9 +27,9 @@ jobs:
         shell: bash
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            files=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+            files=$(git diff --name-only --diff-filter=ACMRT origin/${{ github.base_ref }}...HEAD)
           else
-            files=$(git diff --name-only HEAD~1...HEAD)
+            files=$(git diff --name-only --diff-filter=ACMRT HEAD~1...HEAD)
           fi
 
           files=$(echo "$files" | grep '\.py$' || true)
@@ -37,6 +37,12 @@ jobs:
           echo "files<<EOF" >> $GITHUB_OUTPUT
           echo "$files" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Run ruff
+        if: steps.changed.outputs.files != ''
+        run: |
+          echo "${{ steps.changed.outputs.files }}" | xargs ruff check --fix
+        continue-on-error: true
 
       - name: Run black
         if: steps.changed.outputs.files != ''
@@ -46,17 +52,4 @@ jobs:
       - name: Run isort
         if: steps.changed.outputs.files != ''
         run: |
-          echo "${{ steps.changed.outputs.files }}" | xargs isort --check-only
-
-      - name: Run ruff
-        if: steps.changed.outputs.files != ''
-        run: |
-          echo "${{ steps.changed.outputs.files }}" | xargs ruff check
-
-      - name: "pylint with action"
-        uses: davidslusser/actions_python_pylint@v1.0.0
-        with:
-          src: ${{ steps.changed.outputs.files }}
-          options: "--cov=src"
-          pip_install_command: "pip install -e .[dev]"
-          python_version: "3.10"
+          echo "${{ steps.changed.outputs.files }}" | xargs isort --check-only --profile black

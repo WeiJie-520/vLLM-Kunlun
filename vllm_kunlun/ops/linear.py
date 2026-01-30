@@ -1,16 +1,16 @@
 # SPDX-License-Identifier: Apache-2.0
 # SPDX-FileCopyrightText: Copyright contributors to the vLLM project
 import torch
-import torch.nn as nn
 from torch.nn.parameter import Parameter
-from vllm.model_executor.layers.quantization.base_config import QuantizationConfig
+from vllm.distributed import divide, get_tensor_model_parallel_world_size
+from vllm.logger import init_logger
 from vllm.model_executor.layers.linear import (
     WEIGHT_LOADER_V2_SUPPORTED,
+    ColumnParallelLinear,
     ReplicatedLinear,
     UnquantizedLinearMethod,
-    ColumnParallelLinear
 )
-from vllm.model_executor.utils import set_weight_attrs
+from vllm.model_executor.layers.quantization.base_config import QuantizationConfig
 from vllm.model_executor.parameter import (
     BasevLLMParameter,
     BlockQuantScaleParameter,
@@ -19,15 +19,7 @@ from vllm.model_executor.parameter import (
     PerTensorScaleParameter,
     RowvLLMParameter,
 )
-from vllm.distributed import (
-    divide,
-    get_tensor_model_parallel_rank,
-    get_tensor_model_parallel_world_size,
-    split_tensor_along_last_dim,
-    tensor_model_parallel_all_gather,
-    tensor_model_parallel_all_reduce,
-)
-from vllm.logger import init_logger
+from vllm.model_executor.utils import set_weight_attrs
 
 logger = init_logger(__name__)
 
@@ -45,7 +37,7 @@ def get_weights_half(self):
     """get_weights_half"""
     if hasattr(self, "kunlun_linear_weights_half"):
         return self.kunlun_linear_weights_half
-    weights = torch.nn.Parameter(self.weight.to(torch.float16))
+    torch.nn.Parameter(self.weight.to(torch.float16))
 
 
 ReplicatedLinear.get_weights = get_weights
@@ -77,10 +69,12 @@ def create_weights(
 UnquantizedLinearMethod.create_weights = create_weights
 WEIGHT_LOADER_V2_SUPPORTED.remove("UnquantizedLinearMethod")
 
+
 class QKVParallelLinear(ColumnParallelLinear):
     """
     Base on v0.11.0 QKVParallelLinear, And add v_head size for swa (MIMO V2)
     """
+
     def __init__(
         self,
         hidden_size: int,
@@ -432,4 +426,3 @@ class QKVParallelLinear(ColumnParallelLinear):
 
         assert param_data.shape == loaded_weight.shape
         param_data.copy_(loaded_weight)
-
