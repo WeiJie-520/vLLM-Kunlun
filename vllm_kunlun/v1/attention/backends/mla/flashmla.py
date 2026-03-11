@@ -6,7 +6,7 @@ from typing import ClassVar, Optional, Union
 
 import torch
 
-from vllm.attention.backends.abstract import AttentionLayer, AttentionType
+from vllm.v1.attention.backend import AttentionLayer, AttentionType
 from vllm_kunlun.ops.attention.flashmla import (flash_mla_with_kvcache,
                                          get_mla_metadata,
                                          is_flashmla_supported)
@@ -17,7 +17,7 @@ from vllm_kunlun.v1.attention.backends.mla.common import (MLACommonBackend,
                                                    MLACommonImpl,
                                                    MLACommonMetadata,
                                                    MLACommonMetadataBuilder)
-from vllm.v1.attention.backends.utils import AttentionCGSupport
+from vllm.v1.attention.backend import AttentionCGSupport
 from vllm.v1.kv_cache_interface import AttentionSpec
 
 logger = init_logger(__name__)
